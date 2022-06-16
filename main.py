@@ -26,11 +26,25 @@ db = SQLAlchemy(app)
 
 
 ##CONFIGURE TABLES
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(100))
+    name = db.Column(db.String(100))
+
+    posts = relationship("BlogPost", back_populates="author")
+
+db.create_all()
+
 
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
-    author = db.Column(db.String(250), nullable=False)
+
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    author = relationship("User", back_populates="posts")
+
     title = db.Column(db.String(250), unique=True, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
@@ -40,14 +54,7 @@ db.create_all()
 
 #User Table
 
-class User(UserMixin, db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(100))
-    name = db.Column(db.String(100))
 
-db.create_all()
 
 #Create admin-only decorator
 def admin_only(f):
@@ -151,7 +158,7 @@ def contact():
     return render_template("contact.html", current_user=current_user)
 
 
-@app.route("/new-post")
+@app.route("/new-post", methods=["GET", "POST"])
 @admin_only
 def add_new_post():
     form = CreatePostForm()
@@ -171,7 +178,6 @@ def add_new_post():
 
 
 @app.route("/edit-post/<int:post_id>")
-@admin_only
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
     edit_form = CreatePostForm(
@@ -194,7 +200,6 @@ def edit_post(post_id):
 
 
 @app.route("/delete/<int:post_id>")
-@admin_only
 def delete_post(post_id):
     post_to_delete = BlogPost.query.get(post_id)
     db.session.delete(post_to_delete)
